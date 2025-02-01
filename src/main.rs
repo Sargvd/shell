@@ -3,7 +3,7 @@ use std::io::{self, Write};
 use std::path::Path;
 use std::process::{exit, ExitStatus};
 
-static BUILTINS: &[&str] = &["exit", "echo", "type"];
+static BUILTINS: &[&str] = &["exit", "echo", "type", "pwd"];
 
 fn builtin_exit(input: &str) {
     if input.starts_with("exit") {
@@ -49,6 +49,12 @@ fn builtin_type(input: &str) {
     println!("{}: not found", cmd);
 }
 
+fn builtin_pwd() {
+    if let Ok(pwd) = env::current_dir() {
+        println!("{}", pwd.display());
+    }
+}
+
 fn try_exec(input: &str) -> io::Result<ExitStatus> {
     let parts: Vec<&str> = input.split_whitespace().collect();
     let command = parts[0];
@@ -70,6 +76,7 @@ fn main() {
                 "exit" => builtin_exit(&input),
                 "echo" => builtin_echo(&input),
                 "type" => builtin_type(&input),
+                "pwd" => builtin_pwd(),
                 _ => println!("{}: command not found", command),
             },
             _ => match try_exec(&input) {
