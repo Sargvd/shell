@@ -3,7 +3,7 @@ use std::io::{self, Write};
 use std::path::Path;
 use std::process::{exit, ExitStatus};
 
-static BUILTINS: &[&str] = &["exit", "echo", "type", "pwd"];
+static BUILTINS: &[&str] = &["exit", "echo", "type", "pwd", "cd"];
 
 fn builtin_exit(input: &str) {
     if input.starts_with("exit") {
@@ -55,6 +55,27 @@ fn builtin_pwd() {
     }
 }
 
+fn builtin_cd(input: &str) {
+    let parts: Vec<&str> = input.split_whitespace().collect();
+    if parts.len() == 1 {
+        if let Ok(home) = env::var("HOME") {
+            if let Err(e) = env::set_current_dir(home) {
+                eprintln!("{}", e);
+            }
+        }
+    } else if parts.len() == 2 {
+        if !Path::new(parts[1]).exists() {
+            eprintln!("cd: {}: No such file or directory", parts[1]);
+            return;
+        }
+        if let Err(e) = env::set_current_dir(parts[1]) {
+            eprintln!("{}", e);
+        }
+    } else {
+        eprintln!("cd: too many arguments");
+    }
+}
+
 fn try_exec(input: &str) -> io::Result<ExitStatus> {
     let parts: Vec<&str> = input.split_whitespace().collect();
     let command = parts[0];
@@ -77,6 +98,7 @@ fn main() {
                 "echo" => builtin_echo(&input),
                 "type" => builtin_type(&input),
                 "pwd" => builtin_pwd(),
+                "cd" => builtin_cd(&input),
                 _ => println!("{}: command not found", command),
             },
             _ => match try_exec(&input) {
