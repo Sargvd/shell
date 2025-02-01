@@ -28,47 +28,63 @@ pub fn tokenize(input: String) -> Result<Vec<String>, Error> {
     for c in input.chars() {
         match (c, state.in_backslash, state.in_s_quotes, state.in_d_quotes) {
             // Single quote handling
+            // Outside double quotes, no backslash, toggle single quotes
             ('\'', false, _, false) => state.in_s_quotes = !state.in_s_quotes,
+            // Backlash captures single quote as a literal
             ('\'', true, _, _) => {
                 current.push(c);
                 state.in_backslash = false;
             }
-            ('\'', false, _, true) => current.push(c),
+            // Inside double quotes, treat single quote as literal
+            ('\'', false, _, true) => {
+                current.push(c);
+            }
 
             // Double quote handling
+            // Outside single quotes, no backslash, toggle double quotes
             ('"', false, false, _) => state.in_d_quotes = !state.in_d_quotes,
+            // Backlash captures double quote as a literal
             ('"', true, _, _) => {
                 current.push(c);
                 state.in_backslash = false;
             }
+            // Inside single quotes, treat double quote as literal
+            ('"', false, true, _) => {
+                current.push(c);
+            }
 
             // Space handling
+            // If not backslash, not in quotes, and not empty, push current token
             (' ', false, false, false) if !current.is_empty() => {
                 out.push(std::mem::take(&mut current));
             }
+            // If not backslash, not in quotes, and empty, skip
             (' ', false, false, false) => continue,
+            // If backslash, push space as a literal & turn off backslash
             (' ', true, _, _) => {
                 current.push(c);
                 state.in_backslash = false;
             }
+            // If in single or double quotes, treat space as a literal
             (' ', false, true, _) | (' ', false, _, true) => current.push(c),
 
             // Backslash handling
+            // If second backslash, treat as a literal & turn off
             ('\\', true, _, _) => {
-                current.push(c);
+                current.push('\\');
                 state.in_backslash = false;
             }
-            ('\\', false, _, _) => state.in_backslash = true,
+            // If backslash in single quotes, treat as a literal
+            ('\\', false, true, _) => {
+                current.push('\\');
+            }
+            // If backslash in double quotes, treat as a literal
+            ('\\', false, _, true) => {
+                current.push('\\');
+            }
 
-            // Special escaped characters
-            ('n', true, _, _) => {
-                current.push('\n');
-                state.in_backslash = false;
-            }
-            ('t', true, _, _) => {
-                current.push('\t');
-                state.in_backslash = false;
-            }
+            // If not backslash, turn on backslash
+            ('\\', false, _, _) => state.in_backslash = true,
 
             // Regular characters
             (c, true, _, _) => {

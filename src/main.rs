@@ -7,6 +7,7 @@ use std::io::Error;
 fn try_exec(input: &Vec<String>) -> io::Result<ExitStatus> {
     let maybe_command = &input[0];
     let args = &input[1..];
+
     for path in std::env::var("PATH").unwrap().split(':') {
         let full_path = std::path::Path::new(path).join(maybe_command);
         if full_path.exists() {
