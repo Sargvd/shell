@@ -31,7 +31,7 @@ pub fn tokenize(input: String) -> Result<Vec<String>, Error> {
             // Outside double quotes, no backslash, toggle single quotes
             ('\'', false, _, false) => state.in_s_quotes = !state.in_s_quotes,
             // Backlash captures single quote as a literal
-            ('\'', true, _, _) => {
+            ('\'', true, _, false) => {
                 current.push(c);
                 state.in_backslash = false;
             }
@@ -69,24 +69,29 @@ pub fn tokenize(input: String) -> Result<Vec<String>, Error> {
             (' ', false, true, _) | (' ', false, _, true) => current.push(c),
 
             // Backslash handling
-            // If second backslash, treat as a literal & turn off
-            ('\\', true, _, _) => {
-                current.push('\\');
-                state.in_backslash = false;
-            }
             // If backslash in single quotes, treat as a literal
             ('\\', false, true, _) => {
-                current.push('\\');
+                current.push(c);
             }
-            // If backslash in double quotes, treat as a literal
+            // If backslash in double quotes and not in backlash, turn on backslash
             ('\\', false, _, true) => {
-                current.push('\\');
+                state.in_backslash = true;
+            }
+            // If second backslash, treat as a literal & turn off
+            ('\\', true, _, _) => {
+                current.push(c);
+                state.in_backslash = false;
             }
 
             // If not backslash, turn on backslash
             ('\\', false, _, _) => state.in_backslash = true,
 
             // Regular characters
+            (c, true, _, true) => {
+                current.push('\\');
+                current.push(c);
+                state.in_backslash = false;
+            }
             (c, true, _, _) => {
                 current.push(c);
                 state.in_backslash = false;
@@ -112,5 +117,6 @@ pub fn tokenize(input: String) -> Result<Vec<String>, Error> {
         ));
     }
 
+    // dbg!(&out);
     Ok(out)
 }
