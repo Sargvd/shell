@@ -1,6 +1,7 @@
 use std::io::{self, Write};
 use std::process::ExitStatus;
 mod builtins;
+mod tokenizer;
 use std::io::Error;
 
 fn try_exec(input: &Vec<String>) -> io::Result<ExitStatus> {
@@ -20,37 +21,6 @@ fn try_exec(input: &Vec<String>) -> io::Result<ExitStatus> {
     ))
 }
 
-fn tokenize(input: String) -> Result<Vec<String>, Error> {
-    let mut in_s_quotes: bool = false;
-    let mut out: Vec<String> = vec![];
-    let mut current = String::new();
-    for c in input.chars() {
-        match c {
-            '\'' => in_s_quotes = !in_s_quotes,
-            ' ' if !in_s_quotes => {
-                if current.is_empty() {
-                    continue;
-                }
-                out.push(current.clone());
-                current = String::new();
-            }
-            ' ' if in_s_quotes => {
-                current.push(c);
-            }
-            _ => current.push(c),
-        }
-    }
-    out.push(current.clone());
-    if in_s_quotes {
-        return Err(Error::new(
-            io::ErrorKind::InvalidInput,
-            "Unmatched single quote",
-        ));
-    }
-    // dbg!(&out);
-    Ok(out.clone())
-}
-
 fn main() {
     let stdin = io::stdin();
 
@@ -61,7 +31,8 @@ fn main() {
         let mut input = String::new();
         stdin.read_line(&mut input).expect("Failed to read line");
 
-        let tokens = tokenize(input.trim().to_string());
+        let tokens = tokenizer::tokenize(input.trim().to_string());
+
         match tokens {
             Ok(tokens) => match tokens[0].as_str() {
                 "exit" => builtins::builtin_exit(&tokens[1..]),
