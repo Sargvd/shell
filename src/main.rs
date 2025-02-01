@@ -1,7 +1,7 @@
 use std::env;
 use std::io::{self, Write};
 use std::path::Path;
-use std::process::exit;
+use std::process::{exit, ExitStatus};
 
 static BUILTINS: &[&str] = &["exit", "echo", "type"];
 
@@ -49,6 +49,13 @@ fn builtin_type(input: &str) {
     println!("{}: not found", cmd);
 }
 
+fn try_exec(input: &str) -> io::Result<ExitStatus> {
+    let parts: Vec<&str> = input.split_whitespace().collect();
+    let command = parts[0];
+    let args = &parts[1..];
+    std::process::Command::new(command).args(args).status()
+}
+
 fn main() {
     let stdin = io::stdin();
     loop {
@@ -65,7 +72,12 @@ fn main() {
                 "type" => builtin_type(&input),
                 _ => println!("{}: command not found", command),
             },
-            _ => println!("{}: command not found", input),
+            _ => match try_exec(&input) {
+                Ok(_) => (),
+                Err(_) => {
+                    println!("{}: command not found", input);
+                }
+            },
         }
     }
 }
