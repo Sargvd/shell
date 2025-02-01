@@ -1,4 +1,6 @@
+use std::env;
 use std::io::{self, Write};
+use std::path::Path;
 use std::process::exit;
 
 static BUILTINS: &[&str] = &["exit", "echo", "type"];
@@ -29,12 +31,22 @@ fn builtin_echo(input: &str) {
 }
 
 fn builtin_type(input: &str) {
-    let input = &input.split_whitespace().skip(1).next().unwrap_or("");
-    if BUILTINS.contains(&input) {
-        println!("{} is a shell builtin", input);
+    let cmd = &input.split_whitespace().skip(1).next().unwrap_or("");
+    if BUILTINS.contains(&cmd) {
+        println!("{} is a shell builtin", cmd);
+        return;
     } else {
-        println!("{}: not found", input);
+        if let Ok(path_var) = env::var("PATH") {
+            for path in env::split_paths(&path_var) {
+                let full_path = Path::new(&path).join(cmd);
+                if full_path.exists() {
+                    println!("{} is {}", cmd, full_path.display());
+                    return;
+                }
+            }
+        }
     }
+    println!("{}: not found", cmd);
 }
 
 fn main() {
