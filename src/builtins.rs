@@ -63,11 +63,14 @@ pub fn builtin_cd(input: &str) {
             }
         }
     } else if parts.len() == 2 {
-        if !Path::new(parts[1]).exists() {
+        let path_s = parts[1].replace("~", &env::var("HOME").unwrap_or_default());
+        let path: &Path = Path::new(path_s.as_str());
+
+        if !path.exists() {
             eprintln!("cd: {}: No such file or directory", parts[1]);
             return;
         }
-        if let Err(e) = env::set_current_dir(parts[1]) {
+        if let Err(e) = env::set_current_dir(path) {
             eprintln!("{}", e);
         }
     } else {
