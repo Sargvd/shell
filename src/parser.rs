@@ -38,13 +38,9 @@ pub fn parse(tokens: Vec<tokenizer::Token>) -> Result<Command, Error> {
                 }
             }
             (tokenizer::Token::Word(word), true) => {
-                if !cmd.redirection.is_none() {
+                if !cmd.redirection.is_none() || !cmd.stdout_append.is_none() {
                     cmd.redirection_target = Some(word);
-                } else if !cmd.stderr_redirection.is_none() {
-                    cmd.stderr_redirection_target = Some(word);
-                } else if !cmd.stdout_append.is_none() {
-                    cmd.redirection_target = Some(word);
-                } else if !cmd.stderr_append.is_none() {
+                } else if !cmd.stderr_redirection.is_none() || !cmd.stderr_append.is_none() {
                     cmd.stderr_redirection_target = Some(word);
                 } else {
                     return Err(Error::new(
