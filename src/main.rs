@@ -48,6 +48,9 @@ fn main() {
                         cursor_pos += completion.len() + 1;
                         print!("{} ", completion);
                         io::stdout().flush().expect("Failed to flush stdout");
+                    } else {
+                        print!("\x07");
+                        io::stdout().flush().expect("Failed to flush stdout");
                     }
                 }
                 '\n' => {
@@ -60,21 +63,19 @@ fn main() {
                         io::stdout().flush().expect("Failed to flush stdout");
                         buffer.remove(cursor_pos - 1);
                         cursor_pos -= 1;
-                        // dbg!(&buffer);
                     }
+                }
+                '\x04' => {
+                    builtins::builtin_exit(&["0".to_string()]);
                 }
                 c => {
                     buffer.insert(cursor_pos, c);
                     cursor_pos += 1;
                     print!("{}", c);
                     io::stdout().flush().expect("Failed to flush stdout");
-                    // dbg!(&buffer);
                 }
             }
         }
-
-        // let mut input = String::new();
-        // stdin.read_line(&mut input).expect("Failed to read line");
 
         if let Err(e) = process_command(&buffer) {
             eprintln!("{}", e);
