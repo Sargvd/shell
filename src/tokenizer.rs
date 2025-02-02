@@ -10,6 +10,8 @@ struct TokenizerState {
 pub enum Redirection {
     Stdout,
     Stderr,
+    StdoutAppend,
+    StderrAppend,
 }
 
 #[derive(Debug)]
@@ -78,6 +80,10 @@ pub fn tokenize(input: String) -> Result<Vec<Token>, Error> {
                         out.push(Token::Operand(Redirection::Stdout));
                     } else if current == "2>" {
                         out.push(Token::Operand(Redirection::Stderr));
+                    } else if current == ">>" || current == "1>>" {
+                        out.push(Token::Operand(Redirection::StdoutAppend));
+                    } else if current == "2>>" {
+                        out.push(Token::Operand(Redirection::StderrAppend));
                     } else {
                         out.push(Token::Word(current.clone()));
                     }
@@ -131,6 +137,10 @@ pub fn tokenize(input: String) -> Result<Vec<Token>, Error> {
             out.push(Token::Operand(Redirection::Stdout));
         } else if current == "2>" {
             out.push(Token::Operand(Redirection::Stderr));
+        } else if current == ">>" || current == "1>>" {
+            out.push(Token::Operand(Redirection::StdoutAppend));
+        } else if current == "2>>" {
+            out.push(Token::Operand(Redirection::StderrAppend));
         } else {
             out.push(Token::Word(current));
         }

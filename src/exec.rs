@@ -71,11 +71,63 @@ pub fn exec(cmd: Command) -> io::Result<ExitStatus> {
         }
     }
 
+    if let Some(redirection) = cmd.stdout_append {
+        match redirection {
+            tokenizer::Redirection::StdoutAppend => {
+                if let Some(target) = cmd.redirection_target.as_ref() {
+                    command.stdout(
+                        std::fs::OpenOptions::new()
+                            .append(true)
+                            .create(true)
+                            .open(target)?,
+                    );
+                } else {
+                    return Err(Error::new(
+                        io::ErrorKind::InvalidInput,
+                        "Redirection target expected",
+                    ));
+                }
+            }
+            _ => {
+                return Err(Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "Unsupported redirection type",
+                ));
+            }
+        }
+    }
+
     if let Some(redirection) = cmd.stderr_redirection {
         match redirection {
             tokenizer::Redirection::Stderr => {
                 if let Some(target) = cmd.stderr_redirection_target.as_ref() {
                     command.stderr(std::fs::File::create(target)?);
+                }
+            }
+            _ => {
+                return Err(Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "Unsupported redirection type",
+                ));
+            }
+        }
+    }
+
+    if let Some(redirection) = cmd.stderr_append {
+        match redirection {
+            tokenizer::Redirection::StderrAppend => {
+                if let Some(target) = cmd.stderr_redirection_target.as_ref() {
+                    command.stderr(
+                        std::fs::OpenOptions::new()
+                            .append(true)
+                            .create(true)
+                            .open(target)?,
+                    );
+                } else {
+                    return Err(Error::new(
+                        io::ErrorKind::InvalidInput,
+                        "Redirection target expected",
+                    ));
                 }
             }
             _ => {

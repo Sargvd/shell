@@ -10,6 +10,8 @@ pub struct Command {
     pub redirection_target: Option<String>,
     pub stderr_redirection: Option<tokenizer::Redirection>,
     pub stderr_redirection_target: Option<String>,
+    pub stdout_append: Option<tokenizer::Redirection>,
+    pub stderr_append: Option<tokenizer::Redirection>,
 }
 
 pub fn parse(tokens: Vec<tokenizer::Token>) -> Result<Command, Error> {
@@ -22,6 +24,8 @@ pub fn parse(tokens: Vec<tokenizer::Token>) -> Result<Command, Error> {
         redirection_target: None,
         stderr_redirection: None,
         stderr_redirection_target: None,
+        stdout_append: None,
+        stderr_append: None,
     };
 
     for token in tokens {
@@ -37,6 +41,10 @@ pub fn parse(tokens: Vec<tokenizer::Token>) -> Result<Command, Error> {
                 if !cmd.redirection.is_none() {
                     cmd.redirection_target = Some(word);
                 } else if !cmd.stderr_redirection.is_none() {
+                    cmd.stderr_redirection_target = Some(word);
+                } else if !cmd.stdout_append.is_none() {
+                    cmd.redirection_target = Some(word);
+                } else if !cmd.stderr_append.is_none() {
                     cmd.stderr_redirection_target = Some(word);
                 } else {
                     return Err(Error::new(
@@ -61,6 +69,38 @@ pub fn parse(tokens: Vec<tokenizer::Token>) -> Result<Command, Error> {
                 tokenizer::Redirection::Stdout => {
                     if cmd.redirection.is_none() {
                         cmd.redirection = Some(op);
+                        set_redirection = true;
+                    } else {
+                        return Err(Error::new(
+                            io::ErrorKind::InvalidInput,
+                            "Multiple redirections not supported",
+                        ));
+                    }
+                }
+                tokenizer::Redirection::StdoutAppend => {
+                    if !cmd.redirection.is_none() {
+                        return Err(Error::new(
+                            io::ErrorKind::InvalidInput,
+                            "Mixing append and stdout redirections not supported",
+                        ));
+                    } else if cmd.stdout_append.is_none() {
+                        cmd.stdout_append = Some(op);
+                        set_redirection = true;
+                    } else {
+                        return Err(Error::new(
+                            io::ErrorKind::InvalidInput,
+                            "Multiple redirections not supported",
+                        ));
+                    }
+                }
+                tokenizer::Redirection::StderrAppend => {
+                    if !cmd.stderr_redirection.is_none() {
+                        return Err(Error::new(
+                            io::ErrorKind::InvalidInput,
+                            "Mixing append and stderr redirections not supported",
+                        ));
+                    } else if cmd.stderr_append.is_none() {
+                        cmd.stderr_append = Some(op);
                         set_redirection = true;
                     } else {
                         return Err(Error::new(

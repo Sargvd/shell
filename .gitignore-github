@@ -1,0 +1,35 @@
+# Rust build artifacts
+target/
+**/*.rs.bk
+*.pdb
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS-specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Binary files
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Rust specific (optional)
+# Uncomment the next line if this is a library project
+# Cargo.lock
+
+codecrafters.yml
+your_program.sh
+README.md
+.codecrafters/
+.gitignore*

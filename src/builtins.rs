@@ -33,6 +33,15 @@ pub fn builtin_echo(cmd: &parser::Command) {
             .open(target)
             .unwrap();
         writeln!(file, "{}", cmd.args.join(" ")).unwrap();
+    } else if Some(tokenizer::Redirection::StdoutAppend) == cmd.stdout_append {
+        let target = cmd.redirection_target.as_ref().unwrap();
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .append(true)
+            .create(true)
+            .open(target)
+            .unwrap();
+        writeln!(file, "{}", cmd.args.join(" ")).unwrap();
     } else {
         println!("{}", cmd.args.join(" "));
     }
@@ -44,7 +53,16 @@ pub fn builtin_echo(cmd: &parser::Command) {
             .open(target)
             .unwrap();
         err_file.write_all(b"").unwrap();
-    };
+    } else if Some(tokenizer::Redirection::StderrAppend) == cmd.stderr_append {
+        let target = cmd.stderr_redirection_target.as_ref().unwrap();
+        let mut err_file = std::fs::OpenOptions::new()
+            .write(true)
+            .append(true)
+            .create(true)
+            .open(target)
+            .unwrap();
+        err_file.write_all(b"").unwrap();
+    }
 }
 
 pub fn builtin_type(args: &[String]) {
