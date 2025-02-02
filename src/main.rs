@@ -2,6 +2,7 @@ mod builtins;
 mod exec;
 mod parser;
 mod tokenizer;
+use std::fs;
 use std::io::{self, Read, Write};
 use termios;
 
@@ -49,7 +50,32 @@ fn main() {
                         print!("{} ", completion);
                         io::stdout().flush().expect("Failed to flush stdout");
                     } else {
-                        print!("\x07");
+                        let mut matches = Vec::new();
+
+                        // Collect all matching executables from PATH
+                        for path in std::env::var("PATH").unwrap_or_default().split(':') {
+                            if let Ok(entries) = fs::read_dir(path) {
+                                for entry in entries.filter_map(Result::ok) {
+                                    if let Some(name) = entry.file_name().to_str() {
+                                        if name.starts_with(word) {
+                                            matches.push(name.to_string());
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Handle matches
+                        if matches.is_empty() {
+                            print!("\x07"); // Bell if no matches
+                        } else {
+                            // Complete with first match
+                            let completion = &matches[0][word.len()..];
+                            buffer.push_str(completion);
+                            buffer.push(' ');
+                            cursor_pos += completion.len() + 1;
+                            print!("{} ", completion);
+                        }
                         io::stdout().flush().expect("Failed to flush stdout");
                     }
                 }
