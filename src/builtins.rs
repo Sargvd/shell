@@ -1,4 +1,6 @@
+use crate::tokenizer;
 use std::env;
+use std::io::Write;
 use std::path::Path;
 use std::process::exit;
 
@@ -16,20 +18,37 @@ pub fn builtin_exit(args: &[String]) {
     }
 }
 
-pub fn builtin_echo(args: &[String]) {
+pub fn builtin_echo(
+    args: &[String],
+    _redirection: &Option<tokenizer::Redirection>,
+    _redirection_target: &Option<String>,
+) {
     if args.is_empty() {
         println!();
         return;
     }
-    println!("{}", args.join(" "));
+
+    // dbg!(_redirection);
+    match _redirection {
+        Some(tokenizer::Redirection::File) => {
+            let target = _redirection_target.as_ref().unwrap();
+            let mut file = std::fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .open(target)
+                .unwrap();
+            writeln!(file, "{}", args.join(" ")).unwrap();
+        }
+        _ => println!("{}", args.join(" ")),
+    }
 }
 
 pub fn builtin_type(args: &[String]) {
-    if args.len() == 1 {
+    if args.len() == 0 {
         println!("type requires an argument");
         return;
     }
-    let maybe_cmd = &args[1];
+    let maybe_cmd = &args[0];
     if BUILTINS.contains(&maybe_cmd.as_str()) {
         println!("{} is a shell builtin", maybe_cmd);
         return;

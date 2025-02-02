@@ -1,35 +1,52 @@
 use std::io::{Error, ErrorKind};
 
 struct TokenizerState {
-    in_s_quotes: bool,
-    in_d_quotes: bool,
+    in_single_quotes: bool,
+    in_double_quotes: bool,
     in_backslash: bool,
+}
+
+#[derive(PartialEq, Clone, Copy, Debug)]
+pub enum Redirection {
+    Stdout,
+    File,
+}
+
+#[derive(Debug)]
+pub enum Token {
+    Word(String),
+    Operand(Redirection),
 }
 
 impl TokenizerState {
     fn new() -> Self {
         Self {
-            in_s_quotes: false,
-            in_d_quotes: false,
+            in_single_quotes: false,
+            in_double_quotes: false,
             in_backslash: false,
         }
     }
 }
 
-pub fn tokenize(input: String) -> Result<Vec<String>, Error> {
+pub fn tokenize(input: String) -> Result<Vec<Token>, Error> {
     if input.is_empty() {
         return Ok(Vec::new());
     }
 
     let mut state = TokenizerState::new();
-    let mut out = Vec::with_capacity(input.split_whitespace().count());
+    let mut out: Vec<Token> = Vec::new();
     let mut current = String::new();
 
     for c in input.chars() {
-        match (c, state.in_backslash, state.in_s_quotes, state.in_d_quotes) {
+        match (
+            c,
+            state.in_backslash,
+            state.in_single_quotes,
+            state.in_double_quotes,
+        ) {
             // Single quote handling
             // Outside double quotes, no backslash, toggle single quotes
-            ('\'', false, _, false) => state.in_s_quotes = !state.in_s_quotes,
+            ('\'', false, _, false) => state.in_single_quotes = !state.in_single_quotes,
             // Backlash captures single quote as a literal
             ('\'', true, _, false) => {
                 current.push(c);
@@ -42,7 +59,7 @@ pub fn tokenize(input: String) -> Result<Vec<String>, Error> {
 
             // Double quote handling
             // Outside single quotes, no backslash, toggle double quotes
-            ('"', false, false, _) => state.in_d_quotes = !state.in_d_quotes,
+            ('"', false, false, _) => state.in_double_quotes = !state.in_double_quotes,
             // Backlash captures double quote as a literal
             ('"', true, _, _) => {
                 current.push(c);
@@ -56,7 +73,14 @@ pub fn tokenize(input: String) -> Result<Vec<String>, Error> {
             // Space handling
             // If not backslash, not in quotes, and not empty, push current token
             (' ', false, false, false) if !current.is_empty() => {
-                out.push(std::mem::take(&mut current));
+                if !current.is_empty() {
+                    if current == ">" || current == "1>" {
+                        out.push(Token::Operand(Redirection::File));
+                    } else {
+                        out.push(Token::Word(current.clone()));
+                    }
+                    current = String::new();
+                }
             }
             // If not backslash, not in quotes, and empty, skip
             (' ', false, false, false) => continue,
@@ -101,16 +125,20 @@ pub fn tokenize(input: String) -> Result<Vec<String>, Error> {
     }
 
     if !current.is_empty() {
-        out.push(current);
+        if current == ">" || current == "1>" {
+            out.push(Token::Operand(Redirection::File));
+        } else {
+            out.push(Token::Word(current));
+        }
     }
 
-    if state.in_s_quotes {
+    if state.in_single_quotes {
         return Err(Error::new(
             ErrorKind::InvalidInput,
             "Unmatched single quote",
         ));
     }
-    if state.in_d_quotes {
+    if state.in_double_quotes {
         return Err(Error::new(
             ErrorKind::InvalidInput,
             "Unmatched double quote",
