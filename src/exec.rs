@@ -15,7 +15,7 @@ pub fn exec(cmd: Command) -> io::Result<ExitStatus> {
             Some(Ok(ExitStatus::from_raw(0)))
         }
         "echo" => {
-            builtins::builtin_echo(&cmd.args, &cmd.redirection, &cmd.redirection_target);
+            builtins::builtin_echo(&cmd);
             Some(Ok(ExitStatus::from_raw(0)))
         }
         "type" | "pwd" | "cd" => {
@@ -53,9 +53,6 @@ pub fn exec(cmd: Command) -> io::Result<ExitStatus> {
     if let Some(redirection) = cmd.redirection {
         match redirection {
             tokenizer::Redirection::Stdout => {
-                command.stdout(std::process::Stdio::piped());
-            }
-            tokenizer::Redirection::File => {
                 if let Some(target) = cmd.redirection_target.as_ref() {
                     command.stdout(std::fs::File::create(target)?);
                 } else {
@@ -64,6 +61,28 @@ pub fn exec(cmd: Command) -> io::Result<ExitStatus> {
                         "Redirection target expected",
                     ));
                 }
+            }
+            _ => {
+                return Err(Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "Unsupported redirection type",
+                ));
+            }
+        }
+    }
+
+    if let Some(redirection) = cmd.stderr_redirection {
+        match redirection {
+            tokenizer::Redirection::Stderr => {
+                if let Some(target) = cmd.stderr_redirection_target.as_ref() {
+                    command.stderr(std::fs::File::create(target)?);
+                }
+            }
+            _ => {
+                return Err(Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "Unsupported redirection type",
+                ));
             }
         }
     }

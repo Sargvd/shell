@@ -1,3 +1,4 @@
+use crate::parser;
 use crate::tokenizer;
 use std::env;
 use std::io::Write;
@@ -18,29 +19,32 @@ pub fn builtin_exit(args: &[String]) {
     }
 }
 
-pub fn builtin_echo(
-    args: &[String],
-    _redirection: &Option<tokenizer::Redirection>,
-    _redirection_target: &Option<String>,
-) {
-    if args.is_empty() {
+pub fn builtin_echo(cmd: &parser::Command) {
+    if cmd.args.is_empty() {
         println!();
         return;
     }
 
-    // dbg!(_redirection);
-    match _redirection {
-        Some(tokenizer::Redirection::File) => {
-            let target = _redirection_target.as_ref().unwrap();
-            let mut file = std::fs::OpenOptions::new()
-                .write(true)
-                .create(true)
-                .open(target)
-                .unwrap();
-            writeln!(file, "{}", args.join(" ")).unwrap();
-        }
-        _ => println!("{}", args.join(" ")),
+    if Some(tokenizer::Redirection::Stdout) == cmd.redirection {
+        let target = cmd.redirection_target.as_ref().unwrap();
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(target)
+            .unwrap();
+        writeln!(file, "{}", cmd.args.join(" ")).unwrap();
+    } else {
+        println!("{}", cmd.args.join(" "));
     }
+    if Some(tokenizer::Redirection::Stderr) == cmd.stderr_redirection {
+        let target = cmd.stderr_redirection_target.as_ref().unwrap();
+        let mut err_file = std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(target)
+            .unwrap();
+        err_file.write_all(b"").unwrap();
+    };
 }
 
 pub fn builtin_type(args: &[String]) {

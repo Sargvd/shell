@@ -8,6 +8,8 @@ pub struct Command {
     pub args: Vec<String>,
     pub redirection: Option<tokenizer::Redirection>,
     pub redirection_target: Option<String>,
+    pub stderr_redirection: Option<tokenizer::Redirection>,
+    pub stderr_redirection_target: Option<String>,
 }
 
 pub fn parse(tokens: Vec<tokenizer::Token>) -> Result<Command, Error> {
@@ -18,6 +20,8 @@ pub fn parse(tokens: Vec<tokenizer::Token>) -> Result<Command, Error> {
         args: Vec::new(),
         redirection: None,
         redirection_target: None,
+        stderr_redirection: None,
+        stderr_redirection_target: None,
     };
 
     for token in tokens {
@@ -30,24 +34,42 @@ pub fn parse(tokens: Vec<tokenizer::Token>) -> Result<Command, Error> {
                 }
             }
             (tokenizer::Token::Word(word), true) => {
-                cmd.redirection_target = Some(word);
-                set_redirection = false;
-            }
-            (tokenizer::Token::Operand(op), false) => {
-                if cmd.redirection.is_none() {
-                    cmd.redirection = Some(op);
-                    if op == tokenizer::Redirection::File {
-                        set_redirection = true;
-                    } else if op == tokenizer::Redirection::Stdout {
-                        cmd.redirection_target = None;
-                    }
+                if !cmd.redirection.is_none() {
+                    cmd.redirection_target = Some(word);
+                } else if !cmd.stderr_redirection.is_none() {
+                    cmd.stderr_redirection_target = Some(word);
                 } else {
                     return Err(Error::new(
                         io::ErrorKind::InvalidInput,
-                        "Multiple redirections not supported",
+                        "Redirection target expected",
                     ));
                 }
+                set_redirection = false;
             }
+            (tokenizer::Token::Operand(op), false) => match op {
+                tokenizer::Redirection::Stderr => {
+                    if cmd.stderr_redirection.is_none() {
+                        cmd.stderr_redirection = Some(op);
+                        set_redirection = true;
+                    } else {
+                        return Err(Error::new(
+                            io::ErrorKind::InvalidInput,
+                            "Multiple stderr redirections not supported",
+                        ));
+                    }
+                }
+                tokenizer::Redirection::Stdout => {
+                    if cmd.redirection.is_none() {
+                        cmd.redirection = Some(op);
+                        set_redirection = true;
+                    } else {
+                        return Err(Error::new(
+                            io::ErrorKind::InvalidInput,
+                            "Multiple redirections not supported",
+                        ));
+                    }
+                }
+            },
             (tokenizer::Token::Operand(_), true) => {
                 return Err(Error::new(
                     io::ErrorKind::InvalidInput,
@@ -56,6 +78,5 @@ pub fn parse(tokens: Vec<tokenizer::Token>) -> Result<Command, Error> {
             }
         }
     }
-
     Ok(cmd)
 }

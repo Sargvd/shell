@@ -9,7 +9,7 @@ struct TokenizerState {
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub enum Redirection {
     Stdout,
-    File,
+    Stderr,
 }
 
 #[derive(Debug)]
@@ -75,7 +75,9 @@ pub fn tokenize(input: String) -> Result<Vec<Token>, Error> {
             (' ', false, false, false) if !current.is_empty() => {
                 if !current.is_empty() {
                     if current == ">" || current == "1>" {
-                        out.push(Token::Operand(Redirection::File));
+                        out.push(Token::Operand(Redirection::Stdout));
+                    } else if current == "2>" {
+                        out.push(Token::Operand(Redirection::Stderr));
                     } else {
                         out.push(Token::Word(current.clone()));
                     }
@@ -126,7 +128,9 @@ pub fn tokenize(input: String) -> Result<Vec<Token>, Error> {
 
     if !current.is_empty() {
         if current == ">" || current == "1>" {
-            out.push(Token::Operand(Redirection::File));
+            out.push(Token::Operand(Redirection::Stdout));
+        } else if current == "2>" {
+            out.push(Token::Operand(Redirection::Stderr));
         } else {
             out.push(Token::Word(current));
         }
