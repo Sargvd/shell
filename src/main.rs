@@ -29,6 +29,8 @@ fn main() {
     let mut buffer = String::new();
 
     loop {
+        let mut matches_cache: Vec<String> = Vec::new();
+        let mut in_multiple_opts_state = false;
         print!("$ ");
         io::stdout().flush().expect("Failed to flush stdout");
 
@@ -38,6 +40,16 @@ fn main() {
         loop {
             match read_char().unwrap() {
                 '\t' => {
+                    if in_multiple_opts_state {
+                        println!();
+                        matches_cache.iter().for_each(|m| print!("{}  ", m));
+                        println!();
+                        print!("$ {}", &buffer);
+                        io::stdout().flush().expect("Failed to flush stdout");
+                        in_multiple_opts_state = false;
+                        continue;
+                    }
+
                     let word = buffer.split_whitespace().last().unwrap_or(&buffer);
                     if let Some(cmd) = builtins::BUILTINS
                         .iter()
@@ -68,19 +80,28 @@ fn main() {
                         // Handle matches
                         if matches.is_empty() {
                             print!("\x07"); // Bell if no matches
-                        } else {
+                        } else if matches.len() == 1 {
                             // Complete with first match
                             let completion = &matches[0][word.len()..];
                             buffer.push_str(completion);
                             buffer.push(' ');
                             cursor_pos += completion.len() + 1;
                             print!("{} ", completion);
-                        }
+                        } else if !in_multiple_opts_state {
+                            matches_cache = matches;
+                            matches_cache.sort();
+                            matches_cache.dedup();
+                            in_multiple_opts_state = true;
+                            print!("\x07");
+                        };
                         io::stdout().flush().expect("Failed to flush stdout");
                     }
                 }
                 '\n' => {
                     println!();
+                    if let Err(e) = process_command(&buffer) {
+                        eprintln!("{}", e);
+                    }
                     break;
                 }
                 '\x7f' => {
@@ -101,10 +122,6 @@ fn main() {
                     io::stdout().flush().expect("Failed to flush stdout");
                 }
             }
-        }
-
-        if let Err(e) = process_command(&buffer) {
-            eprintln!("{}", e);
         }
     }
 }
